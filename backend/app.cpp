@@ -35,32 +35,43 @@ int main() {
         return 1;
     }
 
-    std::cout << "Server listening on port 8080 (hostname: " << hostname << ")" << std::endl;
+    std::cout << "Server listening on port 8080 (hostname: "
+              << hostname << ")" << std::endl;
 
-    // Accept connections in loop
     while (true) {
         int client_fd = accept(server_fd, NULL, NULL);
         if (client_fd < 0) continue;
 
-        // ---- FIX STARTS HERE ----
-
         // Prepare body
-        std::string body = "Served by backend: " + std::string(hostname) + "\n";
+        std::string body = "Served by backend: " +
+                           std::string(hostname) + "\n";
 
-        // Prepare full HTTP response properly
+        // Prepare proper HTTP response
         std::string response = "HTTP/1.1 200 OK\r\n";
         response += "Content-Type: text/plain\r\n";
-        response += "Content-Length: " + std::to_string(body.length()) + "\r\n";
+        response += "Content-Length: " +
+                    std::to_string(body.length()) + "\r\n";
         response += "Connection: close\r\n";
         response += "\r\n";
         response += body;
 
-        send(client_fd, response.c_str(), response.length(), 0);
+        // 🔥 IMPORTANT: Send full response safely
+        size_t total_sent = 0;
+        size_t response_length = response.length();
 
-        // ---- FIX ENDS HERE ----
+        while (total_sent < response_length) {
+            ssize_t sent = send(client_fd,
+                                response.c_str() + total_sent,
+                                response_length - total_sent,
+                                0);
+
+            if (sent <= 0) break;
+            total_sent += sent;
+        }
 
         close(client_fd);
     }
 
+    close(server_fd);
     return 0;
 }
