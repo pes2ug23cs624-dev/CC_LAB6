@@ -30,12 +30,14 @@ pipeline {
                 sh '''
                 docker rm -f nginx-lb || true
 
-                docker run -d \
-                --name nginx-lb \
-                --network app-network \
-                -p 80:80 \
-                -v $(pwd)/nginx/default.conf:/etc/nginx/conf.d/default.conf \
-                nginx
+                docker run -d --name nginx-lb --network app-network -p 80:80 nginx
+
+                # wait for nginx to fully start
+                sleep 3
+
+                docker cp nginx/default.conf nginx-lb:/etc/nginx/conf.d/default.conf
+
+                docker restart nginx-lb
                 '''
             }
         }
@@ -44,6 +46,9 @@ pipeline {
     post {
         failure {
             echo "Pipeline failed. Check console logs for errors."
+        }
+        success {
+            echo "Pipeline executed successfully!"
         }
     }
 }
